@@ -1,0 +1,395 @@
+---
+title: "02_DataManip"
+author: "Danielle Ethier"
+date: "01/02/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Updated: Feb 2025
+
+Code used to manipulate the data for old trend analysis. This is in need of updating. Terribly inefficient!
+
+**Search and replace year to current analysis year**
+
+##Load Packages and Create Directories
+
+```{r LoadPackages, include=FALSE}
+
+#install.packages("remotes")
+#remotes::install_github("BirdStudiesCanada/naturecounts")
+
+library (naturecounts)
+library (tidyverse)
+library (reshape)
+library(lubridate)
+
+#mapping
+library(sf)
+library(rnaturalearth)
+library(ggmap)
+library(mapview)
+
+out.dir <- paste("Output/2024")
+dat.dir <- paste("Data/2024")
+
+```
+
+Download the saved data from the last session  
+
+```{r downloaddata, echo = FALSE, message = FALSE}
+
+in.data<-read.csv("Data/2024/ONOWLS_13Feb.csv")
+
+in.data<-in.data %>% filter(RouteIdentifier!="`") %>% drop_na(RouteIdentifier)
+
+```
+
+Prepare files for analysis
+
+```{r prepareowlsfiles, echo = FALSE, message = FALSE}
+
+#owls data select appropriate columns from database
+
+#note that the old code removed duplicated and also used the survey window filed. This data is not transferred into the BMDE table. Duplicates are not removed. There is a work around for survey window.  
+
+owls<-in.data %>% dplyr::select(protocol_id, species_id, CommonName, SamplingEventIdentifier, RouteIdentifier, statprov_code, SurveyAreaIdentifier, YearCollected, MonthCollected, DayCollected, ObservationCount, DecimalLatitude, DecimalLongitude, Remarks2)
+
+#create a station ID column
+owls<-owls %>% separate(SamplingEventIdentifier, c("del1", "del2", "stn"), sep="-", remove=FALSE) %>% dplyr::select(-del1, -del2)
+
+#drop NA in dates
+owls<-owls %>% drop_na("YearCollected", "MonthCollected", "DayCollected", "SurveyAreaIdentifier")
+
+#add day of year (doy) to dataframe to be used later 
+owls <- owls %>%
+  mutate(date = ymd(paste(YearCollected, MonthCollected, DayCollected, sep = "/")),
+         doy = yday(date))
+
+#There should only be one SurveryAreaIdentifier per year. If there are multiple then we need to select the last survey_day for the year. Do this using the slice max doy. 
+owls<-owls %>% group_by(SurveyAreaIdentifier, YearCollected) %>% slice(which.max(doy)) %>% ungroup()
+
+#need to remove duplicates which are in the Remarks field of the BMDE then the remarks field can be safely removed. In othewords, keep the NAs. First we need to create a new level for the factor and add the level 0. Then replace NA with 0 and filter for 0. 
+owls$Remarks2[is.na(owls$Remarks2)] <- 0
+owls<-owls %>% filter(Remarks2=="0")
+```
+
+Create a sampling event table to zero fill the dataframes 
+
+```{r zerofilldata, echo = FALSE, message = FALSE}
+
+stndata<- owls %>% dplyr::select(SamplingEventIdentifier, RouteIdentifier, stn, protocol_id, YearCollected, MonthCollected, DayCollected) %>% distinct ()
+
+```
+
+#Old owls analysis
+
+```{r speciesleveldata, echo = FALSE, message = FALSE}
+
+owlss<-owls %>% dplyr::select(SamplingEventIdentifier, YearCollected, MonthCollected, DayCollected, CommonName)
+
+##This need re-written and put into a loop. 
+
+nswo=subset(owlss, CommonName=="Northern Saw-whet Owl")
+nswo$nowls<-1 #for counting the number of owls 
+barr=subset(owlss, CommonName=="Barred Owl")
+barr$nowls<-1
+boow=subset(owlss, CommonName=="Boreal Owl")
+boow$nowls<-1
+ggow=subset(owlss, CommonName=="Great Gray Owl")
+ggow$nowls<-1
+ghow=subset(owlss, CommonName=="Great Horned Owl")
+ghow$nowls<-1
+
+#Merge each species with the stndata dataframe to zero fill
+
+###NSWO###
+nsworoute=merge(nswo, stndata, by=c("SamplingEventIdentifier", "YearCollected", "MonthCollected", "DayCollected"), all=TRUE); head(nsworoute)
+
+nsworoute$CommonName[is.na(nsworoute$CommonName)]="Northern Saw-whet Owl" 
+nsworoute <- subset(nsworoute, select = c(CommonName,YearCollected, RouteIdentifier,stn, nowls));head(nsworoute)####only the variables we want
+nsworoute$nowls[is.na(nsworoute$nowls)] <- 0
+summary(nsworoute)
+raw_nswo<-nsworoute
+
+nsworoute<-nsworoute %>% group_by(CommonName, YearCollected, RouteIdentifier) %>% summarise(nowls=sum(nowls), Tstn=length(RouteIdentifier))
+nsworoute$spp<-"NSWO"
+
+###BARR###
+barrroute=merge(barr, stndata, by=c("SamplingEventIdentifier", "YearCollected", "MonthCollected", "DayCollected"), all=TRUE); head(barrroute)
+
+barrroute$CommonName[is.na(barrroute$CommonName)]="Barred Owl" 
+barrroute <- subset(barrroute, select = c(CommonName,YearCollected,RouteIdentifier,stn, nowls));head(barrroute)####only the variables we want
+barrroute$nowls[is.na(barrroute$nowls)] <- 0
+summary(barrroute)
+raw_barr<-barrroute
+
+barrroute<-barrroute %>% group_by(CommonName, YearCollected, RouteIdentifier) %>% summarise(nowls=sum(nowls), Tstn=length(RouteIdentifier))
+barrroute$spp<-"BARR"
+
+###BOOW###
+boowroute=merge(boow, stndata, by=c("SamplingEventIdentifier", "YearCollected", "MonthCollected", "DayCollected"), all=TRUE); head(boowroute)
+
+boowroute$CommonName[is.na(boowroute$CommonName)]="Boreal Owl" 
+boowroute <- subset(boowroute, select = c(CommonName,YearCollected,RouteIdentifier,stn, nowls));head(boowroute)####only the variables we want
+boowroute$nowls[is.na(boowroute$nowls)] <- 0
+summary(boowroute)
+raw_boow<-boowroute
+
+boowroute<-boowroute %>% group_by(CommonName, YearCollected, RouteIdentifier) %>% summarise(nowls=sum(nowls), Tstn=length(RouteIdentifier))
+boowroute$spp<-"BOOW"
+summary(boowroute)
+
+###GGOW###
+ggowroute=merge(ggow, stndata, by=c("SamplingEventIdentifier", "YearCollected", "MonthCollected", "DayCollected"), all=TRUE); head(ggowroute)
+
+ggowroute$CommonName[is.na(ggowroute$CommonName)]="Great Gray Owl" 
+ggowroute <- subset(ggowroute, select = c(CommonName,YearCollected,RouteIdentifier,stn, nowls));head(ggowroute)####only the variables we want
+ggowroute$nowls[is.na(ggowroute$nowls)] <- 0
+summary(ggowroute)
+raw_ggow<-ggowroute
+
+ggowroute<-ggowroute %>% group_by(CommonName, YearCollected, RouteIdentifier) %>% summarise(nowls=sum(nowls), Tstn=length(RouteIdentifier))
+ggowroute$spp<-"GGOW"
+summary(ggowroute)
+
+###GHOW###
+ghowroute=merge(ghow, stndata, by=c("SamplingEventIdentifier", "YearCollected", "MonthCollected", "DayCollected"), all=TRUE); head(ghowroute)
+
+ghowroute$CommonName[is.na(ghowroute$CommonName)]="Great Horned Owl" 
+ghowroute <- subset(ghowroute, select = c(CommonName,YearCollected,RouteIdentifier,stn, nowls));head(ghowroute)####only the variables we want
+ghowroute$nowls[is.na(ghowroute$nowls)] <- 0
+summary(ghowroute)
+raw_ghow<-ghowroute
+
+ghowroute<-ghowroute %>% group_by(CommonName, YearCollected, RouteIdentifier) %>% summarise(nowls=sum(nowls), Tstn=length(RouteIdentifier))
+ghowroute$spp<-"GHOW"
+summary(ghowroute)
+
+#combine all species again
+owlroute<-rbind(nsworoute,ggowroute,ghowroute,barrroute,boowroute)
+raw_owldata<-rbind(raw_nswo,raw_boow,raw_ggow,raw_barr,raw_ghow)
+head(raw_owldata)
+owlroute$yr=as.factor(owlroute$YearCollected) #changes yr in dataframe to factor
+owlroute$route=as.factor(owlroute$RouteIdentifier)
+```
+
+```{r routeleveldata, echo = FALSE, message = FALSE}
+#In the process change the dataframe name to owldata
+
+#protocol_id 22=NORTHERN 36=CENTRAL
+region <- in.data %>% dplyr::select(SamplingEventIdentifier, RouteIdentifier, protocol_id, DecimalLatitude, DecimalLongitude) %>% distinct() %>% drop_na()
+
+#create a statation ID column
+region<- region %>% separate(SamplingEventIdentifier, c("del1", "del2", "stn"), sep="-", remove=FALSE) %>% dplyr::select(-del1, -del2)
+
+#remove leading zeros by changing route from character to integer
+region$protocol_id[region$protocol_id=="22"]<-"NORTH"
+region$protocol_id[region$protocol_id=="36"]<-"CENTRAL"
+#change some column names
+colnames(region)[which(names(region) == "protocol_id")] <- "region"
+colnames(region)[which(names(region) == "DecimalLatitude")] <- "lat"
+colnames(region)[which(names(region) == "DecimalLongitude")] <- "long"
+#select the first stop on the route as the routes lat long
+region<-region %>% filter (stn == "1") %>% dplyr::select(-stn, -SamplingEventIdentifier) %>% distinct()
+
+#combine with the owlroute data
+owldata<-left_join(owlroute, region, by="RouteIdentifier")
+
+#identify the regions with missing lat long for Kathy to fix. 
+na_dropcoord<-subset(owldata, is.na(owldata$long))
+owldata<-owldata %>% drop_na(lat, long)
+```
+
+#remove COVID data
+```{r filter years}
+
+owldata<-owldata %>% filter(YearCollected!=2020)
+
+```
+
+Write raw datatable for MNRF Report
+
+```{r writedata, echo = FALSE, message = FALSE}
+
+write.csv(owldata, "Data/2024/owldata_2024.csv")
+owldata<-read.csv("Data/2024/owldata_2024.csv")
+
+```
+
+Subset data by species and region for analysis
+
+```{r writedata, echo = FALSE, message = FALSE}
+#create a subset of NSWO in CENTRAL region
+nswoc=subset(owldata, spp=="NSWO" & region=="CENTRAL") 
+nswon=subset(owldata, spp=="NSWO" & region=="NORTH")
+ggowc=subset(owldata, spp=="GGOW" & region=="CENTRAL")
+ggown=subset(owldata, spp=="GGOW" & region=="NORTH")
+ghowc=subset(owldata, spp=="GHOW" & region=="CENTRAL")
+ghown=subset(owldata, spp=="GHOW" & region=="NORTH")
+barrc=subset(owldata, spp=="BARR" & region=="CENTRAL")
+barrn=subset(owldata, spp=="BARR" & region=="NORTH")
+boowc=subset(owldata, spp=="BOOW" & region=="CENTRAL")
+boown=subset(owldata, spp=="BOOW" & region=="NORTH")
+
+#Summary Stats
+#extract numbers for reporting
+length(unique(boowc[boowc$yr==2024,"RouteIdentifier"])) #number of routes sampled in central Ontario
+length(unique(boown[boown$yr==2024,"RouteIdentifier"])) #number of routes sampled in northern Ontario
+sum(boowc[boowc$yr==2024,"Tstn"]) #number of stops sampled in central Ontario
+sum(boown[boown$yr==2024,"Tstn"]) #number of stops sampled in northern Ontario
+
+```
+
+```{r saveindividualdata, echo = FALSE, message = FALSE}
+
+write.csv(nswoc, "Data/2024/nswoc.csv")
+write.csv(ggowc, "Data/2024/ggowc.csv")
+write.csv(ghowc, "Data/2024/ghowc.csv")
+write.csv(barrc, "Data/2024/barrc.csv")
+write.csv(boowc, "Data/2024/boowc.csv")
+
+write.csv(nswon, "Data/2024/nswon.csv")
+write.csv(ggown, "Data/2024/ggown.csv")
+write.csv(ghown, "Data/2024/ghown.csv")
+write.csv(barrn, "Data/2024/barrn.csv")
+write.csv(boown, "Data/2024/boown.csv")
+
+```
+
+#other species analysis
+
+Here we change the code to reflect the three speices of game bird we wish to model
+
+```{r speciesleveldata, echo = FALSE, message = FALSE}
+
+owlss<-owls %>% dplyr::select(SamplingEventIdentifier, YearCollected, MonthCollected, DayCollected, CommonName)
+
+rugr=subset(owlss, CommonName=="Ruffed Grouse")
+rugr$nowls<-1 #for counting the number of owls 
+wisn=subset(owlss, CommonName=="Wilson's Snipe")
+wisn$nowls<-1
+amwo=subset(owlss, CommonName=="American Woodcock")
+amwo$nowls<-1
+
+
+#Merge each species with the stndata dataframe to zero fill
+
+###RUGR###
+rugrroute=merge(rugr, stndata, by=c("SamplingEventIdentifier", "YearCollected", "MonthCollected", "DayCollected"), all=TRUE); head(rugrroute)
+
+rugrroute$CommonName[is.na(rugrroute$CommonName)]="Ruffed Grouse" 
+rugrroute <- subset(rugrroute, select = c(CommonName,YearCollected, RouteIdentifier,stn, nowls));head(rugrroute)####only the variables we want
+rugrroute$nowls[is.na(rugrroute$nowls)] <- 0
+summary(rugrroute)
+raw_rugr<-rugrroute
+
+rugrroute<-rugrroute %>% group_by(CommonName, YearCollected, RouteIdentifier) %>% summarise(nowls=sum(nowls), Tstn=length(RouteIdentifier))
+rugrroute$spp<-"rugr"
+summary(rugrroute)
+
+###WISN###
+wisnroute=merge(wisn, stndata, by=c("SamplingEventIdentifier", "YearCollected", "MonthCollected", "DayCollected"), all=TRUE); head(wisnroute)
+
+wisnroute$CommonName[is.na(wisnroute$CommonName)]="Wilson's Snipe" 
+wisnroute <- subset(wisnroute, select = c(CommonName,YearCollected,RouteIdentifier,stn, nowls));head(wisnroute)####only the variables we want
+wisnroute$nowls[is.na(wisnroute$nowls)] <- 0
+summary(wisnroute)
+raw_wisn<-wisnroute
+
+wisnroute<-wisnroute %>% group_by(CommonName, YearCollected, RouteIdentifier) %>% summarise(nowls=sum(nowls), Tstn=length(RouteIdentifier))
+wisnroute$spp<-"wisn"
+summary(wisnroute)
+
+###AMWO###
+amworoute=merge(amwo, stndata, by=c("SamplingEventIdentifier", "YearCollected", "MonthCollected", "DayCollected"), all=TRUE); head(amworoute)
+
+amworoute$CommonName[is.na(amworoute$CommonName)]="American Woodcock" 
+amworoute <- subset(amworoute, select = c(CommonName,YearCollected,RouteIdentifier,stn, nowls));head(amworoute)####only the variables we want
+amworoute$nowls[is.na(amworoute$nowls)] <- 0
+summary(amworoute)
+raw_amwo<-amworoute
+
+amworoute<-amworoute %>% group_by(CommonName, YearCollected, RouteIdentifier) %>% summarise(nowls=sum(nowls), Tstn=length(RouteIdentifier))
+amworoute$spp<-"amwo"
+summary(amworoute)
+
+#combine all species again
+otherroute<-rbind(rugrroute,wisnroute,amworoute)
+raw_otherdata<-rbind(raw_rugr,raw_amwo,raw_wisn)
+head(raw_otherdata)
+otherroute$yr=as.factor(otherroute$YearCollected) #changes yr in dataframe to factor
+
+```
+
+```{r routeleveldata, echo = FALSE, message = FALSE}
+#In the process change the datafram name to otherdata
+
+#protocol_id 22=NORTHERN 36=CENTRAL
+region <- in.data %>% dplyr::select(SamplingEventIdentifier, RouteIdentifier, protocol_id, DecimalLatitude, DecimalLongitude) %>% distinct() %>% drop_na()
+
+#create a statation ID column
+region<- region %>% separate(SamplingEventIdentifier, c("del1", "del2", "stn"), sep="-", remove=FALSE) %>% dplyr::select(-del1, -del2)
+
+#remove leading zeros by changing route from character to integer
+region$protocol_id[region$protocol_id=="22"]<-"NORTH"
+region$protocol_id[region$protocol_id=="36"]<-"CENTRAL"
+#change some column names
+colnames(region)[which(names(region) == "protocol_id")] <- "region"
+colnames(region)[which(names(region) == "DecimalLatitude")] <- "lat"
+colnames(region)[which(names(region) == "DecimalLongitude")] <- "long"
+#select the first stop on the route as the routes lat long
+region<-region %>% filter (stn == "1") %>% dplyr::select(-stn, -SamplingEventIdentifier) %>% distinct()
+
+#combine with the otherroute data
+otherdata<-left_join(otherroute, region, by="RouteIdentifier")
+
+#identify the regions wil missing lat long for Kathy to fix. 
+#na_dropcoord<-subset(otherdata, is.na(otherdata$long))
+
+otherdata<-otherdata %>% drop_na(lat, long)
+```
+
+#remove Covid data 2020
+```{r filter years}
+otherdata<-otherdata %>% filter(YearCollected!=2020)
+```
+
+Write raw datatable for MNRF Report
+
+```{r writedata, echo = FALSE, message = FALSE}
+
+write.csv(otherdata, "Data/2024/otherdata_2024.csv")
+otherdata<-read.csv("Data/2024/otherdata_2024.csv")
+
+```
+
+Subset data by species and region for analysis
+
+```{r writedata, echo = FALSE, message = FALSE}
+#create a subset of rugr in CENTRAL region
+rugrc=subset(otherdata, spp=="rugr" & region=="CENTRAL") 
+rugrn=subset(otherdata, spp=="rugr" & region=="NORTH")
+wisnc=subset(otherdata, spp=="wisn" & region=="CENTRAL")
+wisnn=subset(otherdata, spp=="wisn" & region=="NORTH")
+amwoc=subset(otherdata, spp=="amwo" & region=="CENTRAL")
+amwon=subset(otherdata, spp=="amwo" & region=="NORTH")
+
+```
+
+```{r saveindividualdata, echo = FALSE, message = FALSE}
+
+write.csv(rugrc, "Data/2024/rugrc.csv")
+write.csv(wisnc, "Data/2024/wisnc.csv")
+write.csv(amwoc, "Data/2024/amwoc.csv")
+
+write.csv(rugrn, "Data/2024/rugrn.csv")
+write.csv(wisnn, "Data/2024/wisnn.csv")
+write.csv(amwon, "Data/2024/amwon.csv")
+
+```

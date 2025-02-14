@@ -1,0 +1,222 @@
+---
+title: "ON NOS Analysis"
+author: "Danielle Ethier"
+date: "19/02/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Updated: Feb 2025
+
+**Find and replace year with current analysis year**
+
+Code used to analyse the data for old trend analysis. This is in need of updating. Terribly inefficient!
+
+Load packages
+
+```{r loadlibrary, echo = FALSE, message = FALSE}
+library(naturecounts)
+library(tidyverse)
+library(lubridate)
+library(reshape)
+library(lattice)
+library(MASS)
+library(mgcv)
+library(Hmisc)
+```
+
+Download the data from DataManip
+
+```{r loadread data central, echo = FALSE, message = FALSE}
+#central data
+nswoc<-read.csv("Data/2024/nswoc.csv")
+ggowc<-read.csv("Data/2024/ggowc.csv")
+ghowc<-read.csv("Data/2024/ghowc.csv")
+barrc<-read.csv("Data/2024/barrc.csv")
+boowc<-read.csv("Data/2024/boowc.csv")
+
+#northern data
+nswon<-read.csv("Data/2024/nswon.csv")
+ggown<-read.csv("Data/2024/ggown.csv")
+ghown<-read.csv("Data/2024/ghown.csv")
+barrn<-read.csv("Data/2024/barrn.csv")
+boown<-read.csv("Data/2024/boown.csv")
+
+owldata<-read.csv("Data/2024/owldata_2024.csv")
+
+```
+
+```{r gam, echo = FALSE, message = FALSE}
+
+#	Rerun with year as continuous variable
+
+owls<-list()
+owls[[1]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=nswoc, binomial)
+owls[[2]]<- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=nswon, binomial)
+owls[[3]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=ggowc, binomial)
+owls[[4]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=ggown, binomial)
+owls[[5]]<- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=ghowc, binomial)
+owls[[6]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=ghown, binomial)
+owls[[7]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=barrc, binomial)
+owls[[8]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=barrn, binomial)
+owls[[9]]<- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=boowc, binomial)
+owls[[10]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=boown, binomial)
+
+#build table
+table<-NULL
+
+table<-data.frame(Species=rep(c("NSWO","GGOW","GHOW","BARR","BOOW"),each=2), 
+		Region=rep(c("Central","North"),times=5),
+		Trend=NA,
+		LowerCI=NA,
+		UpperCI=NA,
+		P=NA)
+
+for (i in 1:10){
+table[i,3]<-round(coef(owls[[i]])[[2]],4)
+table[i,4]<-round(coef(owls[[i]])[[2]]-(summary(owls[[i]])$p.table[[4]]*1.96),4)		
+table[i,5]<-round(coef(owls[[i]])[[2]]+(summary(owls[[i]])$p.table[[4]]*1.96),4)
+table[i,6]<-round(summary(owls[[i]])$p.table[8],3)
+}
+(options(scipen=999))
+#enter_yr<-max(as.numeric(levels(owldata$yr)[owldata$yr])) ##Assign 2019 below
+write.csv(table, paste("Trends for Ontario Owls 1995-",2024,".csv",sep=""), row.names=F)
+
+#	rerun and create annual indices output
+indices<-list()
+indices[[1]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=nswoc, binomial)
+indices[[2]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=nswon, binomial)
+indices[[3]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=ggowc, binomial)
+indices[[4]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=ggown, binomial)
+indices[[5]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=ghowc, binomial)
+indices[[6]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=ghown, binomial)
+indices[[7]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=barrc, binomial)
+indices[[8]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=barrn, binomial)
+indices[[9]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=boowc, binomial)
+indices[[10]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=boown, binomial)
+
+#build table
+table<-NULL
+#max_yr<-max(as.numeric(owldata$yr))-min(as.numeric(owldata$yr))+1
+#Because we removed 2020 due to covid, we reduce the max year by 1
+
+max_yr<-max(as.numeric(owldata$yr))-min(as.numeric(owldata$yr))
+table<-data.frame(Species=rep(c("BOOW","BARR","GHOW","GGOW","NSWO"),each=max_yr*2), 
+		Region=rep(c("North","Central"),each=max_yr),
+		Year=list(unique(owldata$yr)))
+add<-NULL
+addtable<-NULL
+add<-matrix(NA,max_yr,3)
+for (i in 1:10){
+add[,1]<-round(exp(summary(indices[[i]])$p.table[1:max_yr]),4)
+add[,2]<-round(exp(summary(indices[[i]])$p.table[1:max_yr]-(summary(indices[[i]])$p.table[(max_yr+1):(max_yr*2)])*1.96),4)		
+add[,3]<-round(exp(summary(indices[[i]])$p.table[1:max_yr]+(summary(indices[[i]])$p.table[(max_yr+1):(max_yr*2)])*1.96),4)
+addtable<-rbind(add,addtable)
+}
+table<-cbind(table,addtable)
+names(table)[3:6]<-c("Year", "Index", "LowerCI", "UpperCI")
+options(scipen=999)
+write.csv(table, paste("Annual indices for Ontario Owls 1995-",2024,".csv",sep=""), row.names=F)
+
+```
+
+#Other Sp. Analysis
+
+Download the data from DataManip
+
+```{r loadread data central, echo = FALSE, message = FALSE}
+rugrc<-read.csv("Data/2024/rugrc.csv")
+wisnc<-read.csv("Data/2024/wisnc.csv")
+amwoc<-read.csv("Data/2024/amwoc.csv")
+
+rugrn<-read.csv("Data/2024/rugrn.csv")
+wisnn<-read.csv("Data/2024/wisnn.csv")
+amwon<-read.csv("Data/2024/amwon.csv")
+
+otherdata<-read.csv("Data/2024/otherdata_2024.csv")
+
+```
+
+```{r filterdata 2001, echo = FALSE, message = FALSE}
+
+rugrc<-rugrc%>%filter(YearCollected>=2001)%>% filter(YearCollected<=2024)
+wisnc<-wisnc%>%filter(YearCollected>=2001)%>% filter(YearCollected<=2024)
+amwoc<-amwoc%>%filter(YearCollected>=2001)%>% filter(YearCollected<=2024)
+
+rugrn<-rugrn%>%filter(YearCollected>=2001)%>% filter(YearCollected<=2024)
+wisnn<-wisnn%>%filter(YearCollected>=2001)%>% filter(YearCollected<=2024)
+amwon<-amwon%>%filter(YearCollected>=2001)%>% filter(YearCollected<=2024)
+
+otherdata<-otherdata %>% filter(YearCollected>=2001) %>% filter(YearCollected<=2024)
+
+```
+
+```{r gam, echo = FALSE, message = FALSE}
+
+#	Rerun with year as continous variable
+
+other<-list()
+other[[1]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=rugrc, binomial)
+other[[2]]<- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=rugrn, binomial)
+other[[3]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=wisnc, binomial)
+other[[4]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=wisnn, binomial)
+other[[5]]<- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=amwoc, binomial)
+other[[6]] <- gam(cbind(nowls, I(Tstn-nowls))~as.integer(yr) + s(long, lat), data=amwon, binomial)
+
+
+#build table
+table<-NULL
+
+table<-data.frame(Species=rep(c("RUGR","WISN","AMWO"),each=2), 
+		Region=rep(c("Central","North"),times=3),
+		Trend=NA,
+		LowerCI=NA,
+		UpperCI=NA,
+		P=NA)
+
+for (i in 1:6){
+table[i,3]<-round(coef(other[[i]])[[2]],4)
+table[i,4]<-round(coef(other[[i]])[[2]]-(summary(other[[i]])$p.table[[4]]*1.96),4)		
+table[i,5]<-round(coef(other[[i]])[[2]]+(summary(other[[i]])$p.table[[4]]*1.96),4)
+table[i,6]<-round(summary(other[[i]])$p.table[8],3)
+}
+(options(scipen=999))
+
+write.csv(table, paste("Trends for Ontario OtherSp 2001-",2024,".csv",sep=""), row.names=F)
+
+#	rerun and create annual indices output
+indices<-list()
+indices[[1]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=rugrc, binomial)
+indices[[2]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=rugrn, binomial)
+indices[[3]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=wisnc, binomial)
+indices[[4]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=wisnn, binomial)
+indices[[5]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=amwoc, binomial)
+indices[[6]] <- gam(cbind(nowls, I(Tstn-nowls))~as.factor(yr) + s(long, lat)-1, data=amwon, binomial)
+
+#build table
+table<-NULL
+yearmax<-max(otherdata$YearCollected)
+listYear<-otherdata %>% filter()
+max_yr<-(yearmax-2001)
+
+table<-data.frame(Species=rep(c("AMWO","RUGR","WISN"),each=max_yr*2), 
+		Region=rep(c("North","Central"),each=max_yr),
+		Year=list(unique(otherdata$yr)))
+
+add<-NULL
+addtable<-NULL
+add<-matrix(NA,max_yr,3)
+for (i in 1:6){
+add[,1]<-round(exp(summary(indices[[i]])$p.table[1:max_yr]),4)
+add[,2]<-round(exp(summary(indices[[i]])$p.table[1:max_yr]-(summary(indices[[i]])$p.table[(max_yr+1):(max_yr*2)])*1.96),4)		
+add[,3]<-round(exp(summary(indices[[i]])$p.table[1:max_yr]+(summary(indices[[i]])$p.table[(max_yr+1):(max_yr*2)])*1.96),4)
+addtable<-rbind(add,addtable)
+}
+
+table<-cbind(table,addtable)
+names(table)[3:6]<-c("Year", "Index", "LowerCI", "UpperCI")
+options(scipen=999)
+write.csv(table, paste("Annual indices for Ontario OtherSp 2001-",2024,".csv",sep=""), row.names=F)
+
+```

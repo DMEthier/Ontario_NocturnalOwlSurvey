@@ -1,0 +1,156 @@
+---
+title: "4_Plot1"
+author: "Danielle Ethier"
+date: "02/02/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+**Find and replace year with current analysis year**
+
+#Load libraries
+```{r library}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+
+```
+
+#Load Data
+```{r data}
+
+index<-read.csv("Annual indices for Ontario Owls 1995-2024.csv")
+
+```
+
+#Plot Index Owls
+```{r plot index}
+
+index$Name<-index$Species
+levels(index$Name)[levels(index$Name)=="BARR"] <- "Barred Owl"
+levels(index$Name)[levels(index$Name)=="BOOW"] <- "Boreal Owl"
+levels(index$Name)[levels(index$Name)=="NSWO"] <- "Northern Saw-whet Owl"
+levels(index$Name)[levels(index$Name)=="GGOW"] <- "Great Grey Owl"
+levels(index$Name)[levels(index$Name)=="GHOW"] <- "Great Horned Owl"
+
+#filter out boow and ggow from cental ontario
+
+index <- index %>% filter(Species!="BOOW"|Region != "Central")
+index <- index %>% filter(Species!="GGOW"|Region != "Central")
+
+ggplot(index, aes(x=Year, y=Index))+
+  facet_wrap(~Name, scales="free_y")+
+  scale_colour_manual(values = c("Central" = "red", "North" = "blue"))+
+  geom_point(aes(color=Region, shape = Region), size=3)+
+  geom_line(aes(color=Region, linetype = Region)) +
+#  scale_linetype_manual(values=c("twodash", "dotted"))+
+  theme_classic(base_size = 20)+
+  theme(legend.position = c(0.8, 0.2), legend.text=element_text(size=20), 
+        axis.text.x = element_text(angle = 90, hjust=0.95, vjust=0.2), legend.title=element_blank()) +
+  ylab ("Proportion of Stations Occupied by Route")+
+   theme(legend.key.size = unit(2, 'cm'))
+
+```
+
+#Plot Trends Owls
+```{r plot trends}
+
+trends<-read.csv("Trends for Ontario Owls 1995-2024.csv")
+
+#needed to multiply the output by 100 to get percent and report the same as Doug.
+
+trends$Name<-trends$Species
+levels(trends$Name)[levels(trends$Name)=="BARR"] <- "Barred Owl"
+levels(trends$Name)[levels(trends$Name)=="BOOW"] <- "Boreal Owl"
+levels(trends$Name)[levels(trends$Name)=="NSWO"] <- "Northern Saw-whet Owl"
+levels(trends$Name)[levels(trends$Name)=="GGOW"] <- "Great Grey Owl"
+levels(trends$Name)[levels(trends$Name)=="GHOW"] <- "Great Horned Owl"
+
+trends <- trends %>% filter(Species!="BOOW"|Region != "Central") %>% droplevels()
+trends <- trends %>% filter(Species!="GGOW"|Region != "Central") %>% droplevels()
+
+#Colour option
+ggplot()+
+  geom_pointrange(data=trends, aes(x=Name, y=Trend, ymin=LowerCI, ymax=UpperCI, colour=Region), size=1)+
+  #scale_colour_manual(values = c("Central" = "red", "North" = "blue"))+
+  facet_wrap(~Region)+
+  geom_hline(yintercept=0) +
+  theme_classic(base_size = 20)+
+  theme(legend.text=element_text(size=16), legend.title=element_blank()) +
+   #theme(legend.text=element_text(size=16), 
+        #axis.text.x = element_text(angle = 90, hjust=0.95, vjust=0.2), legend.title=element_blank()) +
+  ylab ("Annual change in propotion of stations occupied (%)") + xlab ("")
+
+```
+
+#Plot change in routes surveys by year (north, central, all)
+
+```{r routes}
+
+#in.data<-read.csv("Data/2024/owldata_2024.csv")
+in.data<-read.csv("Data/2024/ONOWLS_13Feb.csv")
+
+#download and prepare data
+plot_route<-in.data %>% dplyr::select(protocol_id, RouteIdentifier, YearCollected) %>% filter(YearCollected<=2024)
+
+plot_route<-plot_route %>% drop_na(YearCollected)
+
+#protocol_id 22=NORTHERN 36=CENTRAL
+plot_route<-plot_route %>% mutate(region=ifelse(protocol_id==22, "Northern", "Central"))
+
+plot<-plot_route %>% group_by(YearCollected, region) %>%
+  dplyr::summarize(n_route = n_distinct(RouteIdentifier)) 
+  
+#get total
+dat<-plot %>% pivot_wider(names_from=region, values_from = n_route)
+dat$Total<-dat$Central+dat$Northern
+
+#get data back in ong format for plotting
+plot2<-dat %>% pivot_longer(col = 2:4, names_to=c("region"))
+
+ggplot()+
+  geom_line(data=plot2, aes(x=YearCollected, y=value, colour=region), size=1)+
+  theme_classic(base_size = 20)+
+  theme(legend.text=element_text(size=16), 
+        axis.text.x = element_text(angle = 90, hjust=0.95, vjust=0.2), 
+        legend.title=element_blank()) +
+  ylab ("Number of Routes Surveyed")+
+  xlab ("Year")
+
+
+```
+
+#extract points and lat long for making a map
+
+```{r map points}
+
+map_route<-in.data %>% dplyr::select(RouteIdentifier, YearCollected, latitude, longitude) %>% filter (YearCollected == 2024)
+
+map_route<-subset(map_route, !duplicated(RouteIdentifier)) 
+write.csv(map_route, "map_route_2024.csv")
+
+```
+
+#Plot Index Other
+```{r plot index}
+
+index<-read.csv("Annual indices for Ontario OtherSp 2001-2024.csv")
+
+index$Name<-index$Species
+levels(index$Name)[levels(index$Name)=="AMWO"] <- "American woodcock"
+levels(index$Name)[levels(index$Name)=="RUGR"] <- "Ruffed grouse"
+levels(index$Name)[levels(index$Name)=="WISN"] <- "Wilson's Snipe"
+
+ggplot(index, aes(x=Year, y=Index))+
+  facet_wrap(~Name, scales="free_y")+
+  scale_colour_manual(values = c("Central" = "red", "North" = "blue"))+
+  geom_point(aes(color=Region, shape = Region), size=3)+
+  geom_line(aes(color=Region, linetype = Region)) +
+#  scale_linetype_manual(values=c("twodash", "dotted"))+
+  theme_classic(base_size = 20)+
+  theme(legend.text=element_text(size=20), 
+        axis.text.x = element_text(angle = 90, hjust=0.95, vjust=0.2), legend.title=element_blank()) +
+  ylab ("Proportion of Stations Occupied by Route")+
+   theme(legend.key.size = unit(1, 'cm'))
+```

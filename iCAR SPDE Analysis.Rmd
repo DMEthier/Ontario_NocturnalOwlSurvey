@@ -1,0 +1,109 @@
+## Setup
+
+The setup files will get you ready for your analysis. It loads you libraries, needed tables, created directories for your outputs, and assigns some parameter values. 
+
+Also assign max year of the analysis. 
+
+```{r setup}
+
+min.yr <-2018
+max.yr <- 2023 #needs changes with each analysis
+ID<- "dethier" #change this to your user ID. You will be prompted for a password. 
+
+source("00-setup.R")
+
+```
+
+## Choose a collection to be downloaded and prepare the provincial basemap
+
+```{r downloaddata, echo = TRUE, message = FALSE}
+
+#list the collections
+list.coll<-unique(anal.param$collection)
+list.prot<-unique(anal.param$protocol_id)
+
+#select your collection manually for data cleaning
+collection <- "ONOWLS"
+
+```
+
+## Output Tables
+
+Create the output tables. This only needs to be done once per provincial analysis
+
+```{r data manip}
+
+source("i-output.R") #Total count period output tables
+
+```
+
+
+## Data manipulations 
+
+```{r data manip}
+
+source("ii-datamanip.R") #Total count period
+
+```
+
+## Data Analysis iCAR
+
+```{r analysis}
+
+#Add to the trends a separate analysis for north and south
+source("iii-icar.R")  #Total count period, including a covariate for number of stops per route and random effect for protocol_id to control for unexplained variation due to differences in protocol. 
+
+```
+
+## Data Analysis SPDE
+
+```{r analysis}
+
+
+#pull up the provincial basemap manually
+qq <- rnaturalearth::ne_states(country = "canada", returnclass = "sf") %>% st_transform(epsg6703km) 
+qq <- filter(qq, name %in% c("Ontario"))
+
+source("iv-spde.R")
+
+```
+
+## Plot Trends 
+
+```{r Plot trends}
+
+##TO DO: Add to the map separate trends for North and South
+source("v_plots.R")
+
+
+```
+
+## Plot Sum Stats and Visuals
+
+```{r final outputs}
+
+library(sf)
+library(mapview)
+library(ggmap) 
+library(mapproj)
+register_stadiamaps("1cdeb586-3f5a-4ef9-813b-02375efa9f21") 
+
+##Plot all locations
+loc <- read.csv("Output/ONOWLSEvents.csv")
+loc<-loc %>% select(RouteIdentifier, latitude, longitude, survey_year) %>% distinct()
+
+loc<-loc %>% filter(survey_year>=min.yr & survey_year<=max.yr)
+test<-loc %>% select(RouteIdentifier) %>% distinct()
+
+#View Data
+sf<-st_as_sf(loc, coords = c("longitude", "latitude"), crs = 4326)
+mapview(sf, map.types = "Esri.WorldImagery")
+
+
+```
+
+#View Data
+LEBI_sf<-st_as_sf(in.data, 
+                  coords = c("longitude", "latitude"), crs = 4326)
+
+mapview(LEBI_sf, map.types = "Esri.WorldImagery")
