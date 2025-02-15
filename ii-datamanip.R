@@ -3,47 +3,22 @@
 
 #Import data using the naturecounts R package. 
 
-#first look in file. If it does not exist, download from database.
-if(collection =="ABOWLS"){
-  
-data<-read.csv("data/ABOWLS_BMDE.csv")
 
-#Now that the data are downloaded we will want to select the columns needed for the analysis. You may not have all the variables below if you didn't change the `field_set` to "extend". That is OK! You may not need all the auxiliary data for your analytical purposes.
-data$ProtocolCode<-data$protocol_id
-in.data<-data %>% select(SamplingEventIdentifier, SurveyAreaIdentifier, Locality, SiteCode, collection, survey_day, survey_month, survey_year, survey_week, protocol_id, CollectorNumber, EffortUnits1, EffortMeasurement1, species_id, CommonName, ScientificName, Latitude, Longitude, bcr, StateProvince, ObservationCount, ObservationCount2, ObservationCount3) %>% dplyr::rename(latitude = Latitude, longitude = Longitude)
-in.data$RouteIdentifier<-in.data$SiteCode
-in.data$SiteCode<-in.data$SurveyAreaIdentifier
-
-} else{
- 
 data <-try(read.csv(paste(dat.dir, collection, ".RawData.csv", sep = "")), silent = T)
 
 if(class(data) == 'try-error'){
   
   data <- nc_data_dl(collections = collection, fields_set="extended", username =ID, info ="Ethier data download NOS")
   write.csv(data, paste(dat.dir, collection, ".RawData.csv", sep = ""), row.names = FALSE)
- 
-  if(collection == "MBOWLS"){
-    data<-data %>% filter (protocol_id != 29) #remove old MB data collected under an old protcol
-  }
-  }
 
+} #end else 
+  
 #Now that the data are downloaded we will want to select the columns needed for the analysis. You may not have all the variables below if you didn't change the `field_set` to "extend". That is OK! You may not need all the auxiliary data for your analytical purposes.
-in.data<-data %>% select(SamplingEventIdentifier, SurveyAreaIdentifier,RouteIdentifier, Locality, SiteCode, collection, survey_day, survey_month, survey_year, survey_week, protocol_id, CollectorNumber, EffortUnits1, EffortMeasurement1, EffortUnits3, EffortMeasurement3, EffortUnits5, EffortMeasurement5, EffortUnits11, EffortMeasurement11, EffortUnits14, EffortMeasurement14, species_id, CommonName, ScientificName, latitude, longitude, bcr, StateProvince, ObservationDescriptor, ObservationCount, ObservationDescriptor2, ObservationCount2,ObservationDescriptor3, ObservationCount3)
-
-} #end else
+in.data<-data %>% select(SamplingEventIdentifier, SurveyAreaIdentifier,RouteIdentifier, Locality, SiteCode, collection, survey_day, survey_month, survey_year, survey_week, protocol_id, CollectorNumber, EffortUnits1, EffortMeasurement1, EffortUnits3, EffortMeasurement3, EffortUnits5, EffortMeasurement5, EffortUnits11, EffortMeasurement11, EffortUnits14, EffortMeasurement14, species_id, CommonName, ScientificName, latitude, longitude, bcr, StateProvince, ObservationDescriptor, ObservationCount, ObservationDescriptor2, ObservationCount2,ObservationDescriptor3, ObservationCount3, Remarks2)
 
 #Notice here that we don't keep all the ObservationCount fields. There are more that could be retained that capture owls call during each broadcast period.
 #For the purposes of this analysis, we keep ObservationCount2 + ObservationCount3 = Number of owls detected before call playback is used (i.e., silent listening period only). This is nationally standardized. Some protocols do not have call playback, and we can therefore use ObservationCount (totals) for the analysis. 
 #If you want to keep all counts, inclusive of the silent listening + call playback, keep ObservationCount.  
-
-#Filter out the data we know we don't want before proceeding.
-
-#Drop Newfoundland & Labrador based on StateProvince 
-in.data<-in.data %>% filter (StateProvince!="Newfoundland") %>% droplevels()
-
-#Drop Northwest Terriroties based on route identifier, survey started in 2018, and therefore not enough data yet for a national assessment
-in.data<-filter(in.data, !grepl("NT", RouteIdentifier)) %>%  droplevels()
 
 #Remove surveys with missing Month, Day, Year
 in.data<-in.data %>% filter (!is.na(survey_day), !is.na(survey_month), !is.na(survey_year))
@@ -52,27 +27,9 @@ in.data<-in.data %>% filter (!is.na(survey_day), !is.na(survey_month), !is.na(su
 #Remove surveys with missing lat long
 #in.data<-in.data %>% filter (!is.na(latitude), !is.na(longitude))
 
-if(collection=="ABOWLS"){
-in.data<-in.data %>% filter(latitude != "NULL", longitude != "NULL")
-}
-
 #Remove survyes with missing protocol ID 
 in.data<-in.data %>% filter (!is.na(protocol_id))
 
-#Remove surveys with NOCTOWLS protocol ID
-#in.data<-in.data %>% filter (protocol_id != "NOCTOWLS") #This is Alberta's protocol_id
-
-#remove site who naming cause issue on re-import into R 
-in.data<-in.data %>% filter(!(RouteIdentifier %in% c("50N/Gaudry Road", "50N/Gaudry Rd, St. L" )))
-
-if(collection=="BCOWLS"){ #need to parse old data into new protocol_id 
-
-  in.data<-in.data %>% filter(protocol_id!=63)
-  in.data<-in.data %>% mutate(Route = str_replace_all(RouteIdentifier, "[^[:alnum:]]", ""))
-  in.data<-in.data %>% separate(Route, into = c("text", "num"), sep = "(?<=[A-Za-z])(?=[0-9])")
-  in.data<-in.data %>% mutate(protocol_id=ifelse(text=="F",999, protocol_id)) #FLAM survey
-  in.data<-in.data %>% select(-text, -num)
-}
 
 #You may want to fix some data inconsistencies in StateProvince naming. However, you may want to use `collection` or `ProtocolCode` rather than `StateProvince` to do the analysis since there are some points that cross the provincial boundaries. Something to consider. 
 
@@ -130,11 +87,6 @@ for(k in 1:nrow(protcol)) {
   #adjust to add a 7 day buffer on either side
   #Do this for all programs due to the influnce of weather on min and max day
   
-# if(protocol_id=="35"){ #Add buffer to QC data for cleaning. Others may also request this filter be adjusted. 
-    min.doy <- min.doy-14
-    max.doy <- max.doy+14
-#}
-  
   #subset data based on protocol_ID 
   dat<-NULL
   dat<-in.data %>% filter(protocol_id == id)
@@ -174,30 +126,12 @@ for(k in 1:nrow(protcol)) {
   #merge back with main dataframe 
   dat<-left_join(dat, survey, by= c("SurveyAreaIdentifier", "survey_year"))
   
-  #subset out the data with sample_events>1
-  subdat<-subset(dat, sample_events>1)
+  #There should only be one SurveryAreaIdentifier per year. If there are multiple then we need to select the last survey_day for the year. Do this using the slice max doy. 
+  dat<-dat %>% group_by(SurveyAreaIdentifier, survey_year) %>% slice(which.max(doy)) %>% ungroup()
   
-  #want to select the max day for each Year SurveryAreaIdentifier combo with more then one sampling event
-  maxday<-subdat %>% group_by(SurveyAreaIdentifier, survey_year)%>%
-    dplyr::summarize(maxday=max(doy))
-  
-  #merge back with main data, eliminate the unwanted data, select needed columns
-  dat<-left_join(dat, maxday, by= c("SurveyAreaIdentifier", "survey_year"))
-  dat$check<-dat$maxday-dat$doy
-  dat$check[is.na(dat$check)] <- 0
-  dat<-dat%>%filter(check==0)
-  dat<-dat%>% dplyr::select(-date, -sample_events, -maxday, -check)
-  
-  } #end Ontario specific data cleaning
+   } #end Ontario specific data cleaning
 
-  #need to remove duplicates which are in the Remarks field of the BMDE then the remarks field can be safely removed. In othewords, keep the NAs. First we need to create a new level for the factor and add the level 0. Then replace NA with 0 and filter for 0. 
-  #levels <- levels(dat$Remarks2)
-  #levels[length(levels) + 1] <- "0"
-  #dat$Remarks2 <- factor(dat$Remarks2, levels = levels)
-  #dat$Remarks2[is.na(dat$Remarks2)] <- 0
-  #dat<-dat %>% filter(Remarks2=="0")
-  
-  #Subset data to specified year range
+   #Subset data to specified year range
   #max.yr <- anal.param[k,"max.year"]
   dat <- dat %>% filter(survey_year >= min.yr & survey_year <= max.yr)
     
@@ -206,11 +140,6 @@ for(k in 1:nrow(protcol)) {
   loc.dat <-NULL #clear old
   
   #Using SamplingEvent
-  
-  if(collection == "QCOWLS"){
-  loc.dat<-dat %>% separate(SamplingEventIdentifier, c("del1", "del2", "Stop"), sep="-", remove=FALSE) %>% select (-del1, -del2)
-  loc.dat<-loc.dat %>% filter(latitude!="NA") %>% arrange(Stop) %>% distinct(RouteIdentifier, .keep_all = TRUE) %>% select(RouteIdentifier, latitude, longitude, protocol_id)
-  }
   
   loc.dat<-dat %>% filter(latitude!="NA") %>% distinct(RouteIdentifier, .keep_all = TRUE) %>% select(RouteIdentifier, latitude, longitude, protocol_id) %>% distinct()
   write.table(loc.dat, file = paste(out.dir, collection, "Map.csv", sep = ""), row.names = FALSE, append = TRUE, quote = FALSE, sep = ",", col.names = FALSE)
@@ -255,6 +184,11 @@ if(id != "157"){
   #Filter incomplete routes, which are defined here as routes that had less than 5 stops complete in a year. 
   
   dat<- dat %>% filter(nstop>=5)
+  
+  ###___________________________________________________________________
+  #Filter out the bad route
+  
+  dat<-dat %>% filter(RouteIdentifier!="ON001")
   
   ##____________________________________________________________________
   #Now that the surveys are removed that were done in inappropriate environmental conditions we can make a list of unique sampling events to use for zero-filling species-specific data frames. We don't zero-fill the entire data frame for space issues. 

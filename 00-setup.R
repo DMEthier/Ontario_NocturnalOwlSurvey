@@ -36,12 +36,14 @@ library(MatrixModels)
 library(Matrix)
 library(ggspatial)
 library(viridis)
-library(iemisc)
+#library(iemisc)
 library(oce)
 library(mapview)
 library(ggmap) 
 library(mapproj)
 register_stadiamaps("1cdeb586-3f5a-4ef9-813b-02375efa9f21") 
+library(inlabru)
+library(viridis)
 
 # Create folders as necessary
 if(!dir.exists("Data")) dir.create("Data")
@@ -87,8 +89,8 @@ make_plot_field <- function(data_stk, scale_label) {
     #                     mid = "white",
     #                     high = ("royalblue4"), midpoint = 0, space = "Lab",
     #                     guide = "colourbar") +
-    scale_fill_viridis(option="magma", scale_label, na.value="transparent")+
-    #scale_fill_distiller(scale_label, palette = "Blue-Red", na.value = "transparent") +
+    #scale_fill_viridis(option="magma", scale_label, na.value="transparent")+
+    scale_fill_distiller(scale_label, palette = "RdYlBu", na.value = "transparent") +
     theme_bw() +
     geom_sf(fill = NA)
 }
@@ -105,8 +107,8 @@ make_plot_site <- function(data, scale_label) {
     #                     mid = "white",
     #                     high = ("royalblue4"), midpoint = 0, space = "Lab",
     #                     guide = "colourbar") +
-    scale_colour_viridis(option="magma", scale_label, na.value="transparent")+
-    #scale_colour_distiller(scale_label, palette = "Blue-Red", na.value = "transparent") +
+    #scale_colour_viridis(option="magma", scale_label, na.value="transparent")+
+    scale_colour_distiller(scale_label, palette = "RdYlBu", na.value = "transparent") +
     theme_bw() +
     geom_sf(fill = NA)
 

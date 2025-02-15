@@ -1,3 +1,8 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 ## Setup
 
 The setup files will get you ready for your analysis. It loads you libraries, needed tables, created directories for your outputs, and assigns some parameter values. 
@@ -7,7 +12,7 @@ Also assign max year of the analysis.
 ```{r setup}
 
 min.yr <-2018
-max.yr <- 2023 #needs changes with each analysis
+max.yr <- 2024 #needs changes with each analysis
 ID<- "dethier" #change this to your user ID. You will be prompted for a password. 
 
 source("00-setup.R")
@@ -50,7 +55,9 @@ source("ii-datamanip.R") #Total count period
 
 ```{r analysis}
 
+##I did not run this in 2024. Just used the SPDE model.
 #Add to the trends a separate analysis for north and south
+
 source("iii-icar.R")  #Total count period, including a covariate for number of stops per route and random effect for protocol_id to control for unexplained variation due to differences in protocol. 
 
 ```

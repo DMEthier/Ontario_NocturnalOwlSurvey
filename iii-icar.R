@@ -15,7 +15,7 @@ dat<-dat %>% filter(survey_year>=min.yr & survey_year<=max.yr) %>% filter(survey
 #Make Spatial Grid for iCAR Analysis
 
 #all grid for North American
-poly<- read_sf(dsn="C:/Users/dethier/Documents/ethier-scripts/Ontario_NOS/Data", layer="nos_na_grid")
+poly<- read_sf(dsn="C:/Users/ethie/Documents/ethier-scripts/Ontario_NocturnalOwlSurvey/Data", layer="nos_na_grid")
 
 #sf point
 xy<-st_as_sf(loc.dat, coords = c("longitude", "latitude"))
