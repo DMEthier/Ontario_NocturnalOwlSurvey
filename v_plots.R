@@ -11,7 +11,7 @@ trnd<- left_join(trnd, sp.name, by="species_id")
 
 trnd<-trnd %>% filter(area_code=="ON")
 trnd <- trnd %>% drop_na(results_code)
-trnd<-trnd %>% filter(model_type=="iCAR Slope")
+#trnd<-trnd %>% filter(model_type=="iCAR Slope")
 
 trnd <- trnd %>% select(species_id, area_code, english_name, french_name, trnd, lower_ci, upper_ci) %>%
   mutate(sp.trnd = paste(english_name, "/", " \n", french_name, "\n ", round(trnd, digits = 2),  
@@ -50,6 +50,6 @@ trnd.plot<-ggplot(data = plot.dat, aes(x = as.numeric(year), y = index)) +
     theme_classic()
 
 
-pdf(paste(out.dir, collection, "_TrendPlot.pdf", sep=""))
+pdf(paste(plot.dir, collection, "_TrendPlot2.pdf", sep=""))
 plot(trnd.plot)
 while(!is.null(dev.list())) dev.off()  

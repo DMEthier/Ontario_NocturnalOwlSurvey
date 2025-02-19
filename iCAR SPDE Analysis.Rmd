@@ -11,7 +11,7 @@ Also assign max year of the analysis.
 
 ```{r setup}
 
-min.yr <-2018
+min.yr <-1995
 max.yr <- 2024 #needs changes with each analysis
 ID<- "dethier" #change this to your user ID. You will be prompted for a password. 
 
@@ -58,7 +58,7 @@ source("ii-datamanip.R") #Total count period
 ##I did not run this in 2024. Just used the SPDE model.
 #Add to the trends a separate analysis for north and south
 
-source("iii-icar.R")  #Total count period, including a covariate for number of stops per route and random effect for protocol_id to control for unexplained variation due to differences in protocol. 
+#source("iii-icar.R")  #Total count period, including a covariate for number of stops per route and random effect for protocol_id to control for unexplained variation due to differences in protocol. 
 
 ```
 
@@ -82,7 +82,6 @@ source("iv-spde.R")
 ##TO DO: Add to the map separate trends for North and South
 source("v_plots.R")
 
-
 ```
 
 ## Plot Sum Stats and Visuals
@@ -105,6 +104,38 @@ test<-loc %>% select(RouteIdentifier) %>% distinct()
 #View Data
 sf<-st_as_sf(loc, coords = c("longitude", "latitude"), crs = 4326)
 mapview(sf, map.types = "Esri.WorldImagery")
+
+##create a 2024 route level map for all RouteIdentifier
+in.data<-read.csv("Output/ONOWLSEvents.csv")
+plot.data<-in.data %>% filter(survey_year==2024) %>% select(RouteIdentifier, latitude, longitude) %>% distinct()
+sf<-st_as_sf(plot.data, coords = c("longitude", "latitude"), crs = 4326)
+#load the base map
+qq <- rnaturalearth::ne_states(country = "canada", returnclass = "sf") 
+qq <- filter(qq, name %in% c("Ontario"))
+#ensure crs are the same for sf and qq
+sf<-st_transform(sf, crs = st_crs(qq))
+
+#Use ggplot to make a map of RoutteIdentifier
+#don't include legend for RouteIdentifier
+#include a north arrow and scale
+ggplot() +
+  geom_sf(data = qq, fill = "white", color = "black") +
+  geom_sf(data = sf, size = 2) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(title = "Nocturnal Owl Survey Routes 2024") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank()) +
+  theme(panel.grid = element_blank())+ 
+  annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.5, "in")) +
+  annotation_scale(location = "bl", width_hint = 0.5, text_cex = 0.5)
+
+#write the plot as a png to the plot.dir
+ggsave("plots/RouteIdentifier2024.png", width = 8, height = 8, units = "in", dpi = 300)
+
+
 
 
 ```

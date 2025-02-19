@@ -30,7 +30,7 @@ dat<-dat %>% dplyr::select("SiteCode", "species_id", "CommonName", "RouteIdentif
 
 #create species list for national assessment
 
-sp.list<-c("Barred Owl", "Boreal Owl", "Great Gray Owl", "Great Horned Owl", "Northern Saw-whet Owl")
+sp.list<-c("Barred Owl", "Boreal Owl", "Great Gray Owl", "Great Horned Owl", "Northern Saw-whet Owl", "American Woodcock", "Ruffed Grouse", "Wilson's Snipe")
 
 #load species names list
 sp.names<-meta_species_taxonomy()
@@ -133,8 +133,6 @@ for(m in 1:length(sp.list)) {
     #Make a set of distinct study sites for mapping    
     #Make a two extension hulls and mesh for spatial model
     
-   
-    
    #make the mesh this way so that the point fall on the vertices of the lattice
    Loc_all<-sp.data%>% select(easting, northing) %>% 
    st_drop_geometry() %>% as.matrix()
@@ -146,9 +144,14 @@ for(m in 1:length(sp.list)) {
      st_drop_geometry() %>%
      as.matrix()
    
-
-     mesh2<-fm_mesh_2d_inla(Loc_unique, 
-                           #mesh2<-inla.mesh.2d(Loc, 
+   hull <- fm_extensions(
+     sp.data,
+     convex = c(20, 50),
+     concave = c(35, 50)
+   )
+   
+    mesh2 <-NULL
+    mesh2<-fm_mesh_2d_inla(Loc_unique, 
                            boundary = hull,
                            max.edge = c(50, 50), # km inside and outside
                            cutoff = 0,
@@ -161,6 +164,7 @@ for(m in 1:length(sp.list)) {
     )
     
       # plot mesh and save to file
+      meshmap2<-NULL
       meshmap2 <- ggplot() +
         gg(data = mesh2) +
         geom_sf(data = qq, fill = NA) +
@@ -289,7 +293,7 @@ for(m in 1:length(sp.list)) {
       area_code = "ON",
       model_type = "SPDE",
       species_id=sp.id,
-      species_name=species_name,
+      species_name=sp.list[m],
       species_sci_name=species_sci_name,
       error="",
       #Assing missing data fields 
@@ -362,16 +366,15 @@ for(m in 1:length(sp.list)) {
     trend.out <- data.frame(
       index_type = "Slope trend",
       trnd = median(r, na.rm = TRUE),
-      lower_ci = as.numeric(quantile(m, prob = 0.025)),  # Convert to numeric
-      upper_ci = as.numeric(quantile(m, prob = 0.950)),  # Convert to numeric
+      lower_ci = as.numeric(quantile(r, prob = 0.025)),  # Convert to numeric
+      upper_ci = as.numeric(quantile(r, prob = 0.950)),  # Convert to numeric
       sd = sd(m, na.rm = TRUE),
-      per_trend = median(m, na.rm = TRUE) / 100,
+      per_trend = median(r, na.rm = TRUE) / 100,
       period_num = Y2 - Y1,
       percent_change = ((1 + (median(m, na.rm = TRUE) / 100)) ^ (Y2 - Y1) - 1) * 100,
-      Width_of_Credible_Interval_slope = as.numeric(quantile(m, prob = 0.950)) - as.numeric(quantile(m, prob = 0.025)),
-      precision_cat = ifelse(pred.ch$Width_of_Credible_Interval < 3.5, "High",
-                             ifelse(pred.ch$Width_of_Credible_Interval >= 3.5 & pred.ch$Width_of_Credible_Interval <= 6.7, "Medium", "Low")))
-     
+      Width_of_Credible_Interval = as.numeric(quantile(r, prob = 0.950)) - as.numeric(quantile(r, prob = 0.025)))
+      
+      
       trend.out<-trend.out %>% mutate(model_type="SPDE", 
              model_family = "nbionomial",
              years = paste(Y1, "-", Y2, sep = ""),
@@ -385,7 +388,7 @@ for(m in 1:length(sp.list)) {
              species_code = "",
              species_id=sp.id,
              index_type="slope", 
-             species_name=species_name,
+             species_name=sp.list[m],
              species_sci_name=species_sci_name,
              stderr = "",
              model_fit = "", 	
@@ -424,10 +427,12 @@ for(m in 1:length(sp.list)) {
              quantile_835 = "",
              quantile_950 = "",
              trend_id = "",
-             upload_dt = "")
+             upload_dt = "", 
+             precision_cat = ifelse(trend.out$Width_of_Credible_Interval < 3.5, "High",
+                                    ifelse(trend.out$Width_of_Credible_Interval >= 3.5 & trend.out$Width_of_Credible_Interval <= 6.7, "Medium", "Low")))
     
 
-    write.trend<-trend.out %>% dplyr::select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
+    write.trend<-trend.out %>% dplyr::select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, index_type, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
     
     
     write.table(write.trend, 
@@ -702,7 +707,7 @@ for(m in 1:length(sp.list)) {
     tau_route$prob_MI<-""
     tau_route$prob_LI<-""
     
-    trend.csv<-tau_route %>% select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
+    trend.csv<-tau_route %>% select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, index_type, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
     
     # Write data to table
     write.table(trend.csv, file = paste(out.dir, 
