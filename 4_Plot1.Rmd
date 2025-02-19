@@ -20,7 +20,7 @@ library(tidyverse)
 #Load Data
 ```{r data}
 
-index<-read.csv("Annual indices for Ontario Owls 1995-2024.csv")
+index<-read.csv("Output/2024/Annual indices for Ontario Owls 1995-2024.csv")
 
 ```
 
@@ -56,7 +56,7 @@ ggplot(index, aes(x=Year, y=Index))+
 #Plot Trends Owls
 ```{r plot trends}
 
-trends<-read.csv("Trends for Ontario Owls 1995-2024.csv")
+trends<-read.csv("Output/2024/Trends for Ontario Owls 1995-2024.csv")
 
 #needed to multiply the output by 100 to get percent and report the same as Doug.
 
@@ -110,7 +110,8 @@ dat$Total<-dat$Central+dat$Northern
 plot2<-dat %>% pivot_longer(col = 2:4, names_to=c("region"))
 
 ggplot()+
-  geom_line(data=plot2, aes(x=YearCollected, y=value, colour=region), size=1)+
+  geom_line(data=plot2, aes(x=YearCollected, y=value, colour=region, linetype = region), size=1)+
+  scale_linetype_manual(values = c("solid", "dashed", "dotdash")) +
   theme_classic(base_size = 20)+
   theme(legend.text=element_text(size=16), 
         axis.text.x = element_text(angle = 90, hjust=0.95, vjust=0.2), 
