@@ -213,7 +213,7 @@ for(m in 1:length(sp.list)) {
       inla.setOption(scale.model.default=TRUE)
       
       
-      formula.sp<- count ~ -1 + Intercept +
+      formula.sp<- count ~ -1 + Intercept + 
       f(kappa, model="iid", hyper=hyper.iid) + f(ellip, model="iid", hyper=hyper.iid)+ f(alpha, model =spde)+ f(tau, model =spde)
       
       
@@ -518,11 +518,12 @@ for(m in 1:length(sp.list)) {
       data_stk = out_stk[["tau_median"]],
       scale_label = "Trend"
     )
-    # sites kappa_s
-    ps <- make_plot_site(
-      data = cbind(site_map, data.frame(value = kappa$median)),
-      scale_label = "posterior\nmedian\nkappa"
-    )
+    # # sites kappa_s
+    # ps <- make_plot_site(
+    #   data = cbind(site_map, data.frame(value = kappa$median)),
+    #   scale_label = "posterior\nmedian\nkappa"
+    # )
+   
     # range95
     # fields alpha_s, tau_s
     pa_range95 <- make_plot_field(
@@ -535,11 +536,11 @@ for(m in 1:length(sp.list)) {
       scale_label = "posterior\nrange95\n100(exp(tau_s)-1)"
     )
     
-    # sites kappa_s
-    ps_range95 <- make_plot_site(
-      data = cbind(site_map, data.frame(value = kappa$range95)),
-      scale_label = "posterior\nrange95\nexp(kappa_s)"
-    )
+    # # sites kappa_s
+    # ps_range95 <- make_plot_site(
+    #   data = cbind(site_map, data.frame(value = kappa$range95)),
+    #   scale_label = "posterior\nrange95\nexp(kappa_s)"
+    # )
     
     # plot together
     #multiplot(ps, pa, pt, cols = 2)

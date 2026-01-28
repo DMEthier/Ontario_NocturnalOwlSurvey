@@ -11,7 +11,7 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Updated: Feb 2025
+Updated: Jan 2026
 
 Code used to manipulate the data for old trend analysis. This is in need of updating. Terribly inefficient!
 
@@ -35,8 +35,8 @@ library(rnaturalearth)
 library(ggmap)
 library(mapview)
 
-out.dir <- paste("Output/2024")
-dat.dir <- paste("Data/2024")
+out.dir <- paste("Output/2026")
+dat.dir <- paste("Data/2026")
 
 ```
 
@@ -44,7 +44,7 @@ Download the saved data from the last session
 
 ```{r downloaddata, echo = FALSE, message = FALSE}
 
-in.data<-read.csv("Data/2024/ONOWLS_13Feb.csv")
+in.data<-read.csv("Data/2026/ONOWLS_20Jan2026.csv")
 
 in.data<-in.data %>% filter(RouteIdentifier!="`") %>% drop_na(RouteIdentifier)
 
@@ -217,8 +217,8 @@ Write raw datatable for MNRF Report
 
 ```{r writedata, echo = FALSE, message = FALSE}
 
-write.csv(owldata, "Data/2024/owldata_2024.csv")
-owldata<-read.csv("Data/2024/owldata_2024.csv")
+write.csv(owldata, "Data/2026/owldata_2026.csv")
+owldata<-read.csv("Data/2026/owldata_2026.csv")
 
 ```
 
@@ -239,26 +239,26 @@ boown=subset(owldata, spp=="BOOW" & region=="NORTH")
 
 #Summary Stats
 #extract numbers for reporting
-length(unique(boowc[boowc$yr==2024,"RouteIdentifier"])) #number of routes sampled in central Ontario
-length(unique(boown[boown$yr==2024,"RouteIdentifier"])) #number of routes sampled in northern Ontario
-sum(boowc[boowc$yr==2024,"Tstn"]) #number of stops sampled in central Ontario
-sum(boown[boown$yr==2024,"Tstn"]) #number of stops sampled in northern Ontario
+length(unique(boowc[boowc$yr==2026,"RouteIdentifier"])) #number of routes sampled in central Ontario
+length(unique(boown[boown$yr==2026,"RouteIdentifier"])) #number of routes sampled in northern Ontario
+sum(boowc[boowc$yr==2026,"Tstn"]) #number of stops sampled in central Ontario
+sum(boown[boown$yr==2026,"Tstn"]) #number of stops sampled in northern Ontario
 
 ```
 
 ```{r saveindividualdata, echo = FALSE, message = FALSE}
 
-write.csv(nswoc, "Data/2024/nswoc.csv")
-write.csv(ggowc, "Data/2024/ggowc.csv")
-write.csv(ghowc, "Data/2024/ghowc.csv")
-write.csv(barrc, "Data/2024/barrc.csv")
-write.csv(boowc, "Data/2024/boowc.csv")
+write.csv(nswoc, "Data/2026/nswoc.csv")
+write.csv(ggowc, "Data/2026/ggowc.csv")
+write.csv(ghowc, "Data/2026/ghowc.csv")
+write.csv(barrc, "Data/2026/barrc.csv")
+write.csv(boowc, "Data/2026/boowc.csv")
 
-write.csv(nswon, "Data/2024/nswon.csv")
-write.csv(ggown, "Data/2024/ggown.csv")
-write.csv(ghown, "Data/2024/ghown.csv")
-write.csv(barrn, "Data/2024/barrn.csv")
-write.csv(boown, "Data/2024/boown.csv")
+write.csv(nswon, "Data/2026/nswon.csv")
+write.csv(ggown, "Data/2026/ggown.csv")
+write.csv(ghown, "Data/2026/ghown.csv")
+write.csv(barrn, "Data/2026/barrn.csv")
+write.csv(boown, "Data/2026/boown.csv")
 
 ```
 
@@ -364,8 +364,8 @@ Write raw datatable for MNRF Report
 
 ```{r writedata, echo = FALSE, message = FALSE}
 
-write.csv(otherdata, "Data/2024/otherdata_2024.csv")
-otherdata<-read.csv("Data/2024/otherdata_2024.csv")
+write.csv(otherdata, "Data/2026/otherdata_2026.csv")
+otherdata<-read.csv("Data/2026/otherdata_2026.csv")
 
 ```
 
@@ -384,12 +384,12 @@ amwon=subset(otherdata, spp=="amwo" & region=="NORTH")
 
 ```{r saveindividualdata, echo = FALSE, message = FALSE}
 
-write.csv(rugrc, "Data/2024/rugrc.csv")
-write.csv(wisnc, "Data/2024/wisnc.csv")
-write.csv(amwoc, "Data/2024/amwoc.csv")
+write.csv(rugrc, "Data/2026/rugrc.csv")
+write.csv(wisnc, "Data/2026/wisnc.csv")
+write.csv(amwoc, "Data/2026/amwoc.csv")
 
-write.csv(rugrn, "Data/2024/rugrn.csv")
-write.csv(wisnn, "Data/2024/wisnn.csv")
-write.csv(amwon, "Data/2024/amwon.csv")
+write.csv(rugrn, "Data/2026/rugrn.csv")
+write.csv(wisnn, "Data/2026/wisnn.csv")
+write.csv(amwon, "Data/2026/amwon.csv")
 
 ```

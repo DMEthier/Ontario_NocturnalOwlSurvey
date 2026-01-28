@@ -12,7 +12,7 @@ Also assign max year of the analysis.
 ```{r setup}
 
 min.yr <-1995
-max.yr <- 2024 #needs changes with each analysis
+max.yr <- 2025 #needs changes with each analysis
 ID<- "dethier" #change this to your user ID. You will be prompted for a password. 
 
 source("00-setup.R")
@@ -58,7 +58,7 @@ source("ii-datamanip.R") #Total count period
 ##I did not run this in 2024. Just used the SPDE model.
 #Add to the trends a separate analysis for north and south
 
-#source("iii-icar.R")  #Total count period, including a covariate for number of stops per route and random effect for protocol_id to control for unexplained variation due to differences in protocol. 
+source("iii-icar.R")  #Total count period, including a covariate for number of stops per route and random effect for protocol_id to control for unexplained variation due to differences in protocol. 
 
 ```
 
@@ -72,6 +72,14 @@ qq <- rnaturalearth::ne_states(country = "canada", returnclass = "sf") %>% st_tr
 qq <- filter(qq, name %in% c("Ontario"))
 
 source("iv-spde.R")
+
+```
+
+## Data Analysis Non-spatial with N and S Protcol
+
+```{r}
+
+source("v_trends.R")
 
 ```
 

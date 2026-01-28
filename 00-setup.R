@@ -22,7 +22,7 @@ library(sp)
 library(sf)
 library(spdep)
 library(naturecounts)
-library(inlatools)
+library(INLAtools)
 library(maps)
 library(ggplot2)
 library(terra)
@@ -45,14 +45,25 @@ register_stadiamaps("1cdeb586-3f5a-4ef9-813b-02375efa9f21")
 library(inlabru)
 library(viridis)
 
-# Create folders as necessary
-if(!dir.exists("Data")) dir.create("Data")
-if(!dir.exists("Output")) dir.create("Output")
-if(!dir.exists("Plots")) dir.create("Plots")
+# top-level folders
+if (!dir.exists("Data"))   dir.create("Data")
+if (!dir.exists("Output")) dir.create("Output")
+if (!dir.exists("Plots"))  dir.create("Plots")
 
-out.dir <- paste("Output/")
-dat.dir <- paste("Data/")
-plot.dir<-paste("Plots/")
+# year subfolders
+data_dir_year  <- file.path("Data",   max.yr)
+out_dir_year   <- file.path("Output", max.yr)
+plot_dir_year  <- file.path("Plots",  max.yr)
+
+if (!dir.exists(data_dir_year))  dir.create(data_dir_year)
+if (!dir.exists(out_dir_year))   dir.create(out_dir_year)
+if (!dir.exists(plot_dir_year))  dir.create(plot_dir_year)
+
+# convenient objects
+dat.dir  <- paste0(data_dir_year,  "/")
+out.dir  <- paste0(out_dir_year,   "/")
+plot.dir <- paste0(plot_dir_year,  "/")
+
 
 ## Source scripts
 source("./functions/LOESS.R")

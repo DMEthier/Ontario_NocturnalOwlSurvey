@@ -7,9 +7,9 @@ editor_options:
   chunk_output_type: console
 ---
 
-Updated: Feb 2025
+Updated: January 2026
 
-Code used to create the basic data summaries Birds Canada's Noctural Owl Survey in Ontario. Used for annual reporting to MNRF. 
+Code used to create the basic data summaries Birds Canada's Nocturnal Owl Survey in Ontario. Used for annual reporting to MNRF. 
 
 ##Load Packages and Create Directories
 **Search and change year to current analysis year**
@@ -30,11 +30,11 @@ library(ggmap)
 library(mapview)
 
 #create and use data and output directories
-dir.create("Data/2024") 
-dir.create("Output/2024") 
+dir.create("Data/2026") 
+dir.create("Output/2026") 
 
-out.dir <- paste("Output/2024") 
-dat.dir <- paste("Data/2024") 
+out.dir <- paste("Output/2026") 
+dat.dir <- paste("Data/2026") 
 
 ```
 
@@ -57,10 +57,10 @@ ONOWLS_dat <- nc_data_dl(collections = "ONOWLS",
                       info = "MY REASON", fields_set="extended")
 
 #save to local drive for safe keeping
-write.csv(ONOWLS_dat, "Data/2024/ONOWLS_TODAYSDATE.csv")
+write.csv(ONOWLS_dat, "Data/2026/ONOWLS_TODAYSDATE.csv")
 
 #read data from file
-ONOWLS_dat<-read.csv("Data/2024/ONOWLS_TODAYSDATE.csv")
+ONOWLS_dat<-read.csv("Data/2026/ONOWLS_TODAYSDATE.csv")
 
 ```
 
@@ -74,7 +74,11 @@ EffortUnit and ObservationDescriptor describe the data for each Measurement and 
 
 in.data<-ONOWLS_dat %>% filter(RouteIdentifier!="`")
 
-in.data<-in.data %>% dplyr::select(SamplingEventIdentifier, SurveyAreaIdentifier,RouteIdentifier, SiteCode, collection, survey_day, survey_month, survey_year, survey_week, protocol_id, CollectorNumber, Collector,  EffortUnits1, EffortMeasurement1, EffortUnits2, EffortMeasurement2, EffortUnits3, EffortMeasurement3, EffortUnits4, EffortMeasurement4, EffortUnits5, EffortMeasurement5, EffortUnits6, EffortMeasurement6, EffortUnits7, EffortMeasurement7, EffortUnits8, EffortMeasurement8, EffortUnits9, EffortMeasurement9, EffortUnits10, EffortMeasurement10, EffortUnits11, EffortMeasurement11, EffortUnits12, EffortMeasurement12, EffortUnits14, EffortMeasurement14, species_id, CommonName, ScientificName, latitude, longitude, bcr, StateProvince, ObservationDescriptor, ObservationCount, ObservationDescriptor2, ObservationCount2,ObservationDescriptor3, ObservationCount3, ObservationDescriptor4, ObservationCount4, ObservationDescriptor5, ObservationCount5)
+#Get Unique location name
+in.data$Location<-sub("-?stop ?[[:alnum:]]+$", "", in.data$Locality,
+                        ignore.case = TRUE)
+
+in.data<-in.data %>% dplyr::select(SamplingEventIdentifier, SurveyAreaIdentifier,RouteIdentifier, Location, SiteCode, collection, survey_day, survey_month, survey_year, survey_week, protocol_id, CollectorNumber, Collector,  EffortUnits1, EffortMeasurement1, EffortUnits2, EffortMeasurement2, EffortUnits3, EffortMeasurement3, EffortUnits4, EffortMeasurement4, EffortUnits5, EffortMeasurement5, EffortUnits6, EffortMeasurement6, EffortUnits7, EffortMeasurement7, EffortUnits8, EffortMeasurement8, EffortUnits9, EffortMeasurement9, EffortUnits10, EffortMeasurement10, EffortUnits11, EffortMeasurement11, EffortUnits12, EffortMeasurement12, EffortUnits14, EffortMeasurement14, species_id, CommonName, ScientificName, latitude, longitude, bcr, StateProvince, ObservationDescriptor, ObservationCount, ObservationDescriptor2, ObservationCount2,ObservationDescriptor3, ObservationCount3, ObservationDescriptor4, ObservationCount4, ObservationDescriptor5, ObservationCount5)
 
 ```
 
@@ -97,14 +101,14 @@ collect.yr<-in.data %>% group_by(survey_year, protocol_id) %>% summarise(ncollec
 
 collect.yr<-cast(collect.yr, survey_year~protocol_id, value="ncollectors")
 
-write.csv(route.yr, "Output/2024/ONOWLS.RoutesPerYear.csv")
-write.csv(collect.yr, "Output/2024/ONOWLS.CollectorsPerYear.csv")
+write.csv(route.yr, "Output/2026/ONOWLS.RoutesPerYear.csv")
+write.csv(collect.yr, "Output/2026/ONOWLS.CollectorsPerYear.csv")
 
 #summarize the total count of each species per year
 in.data$ObservationCount<-as.numeric(in.data$ObservationCount) 
 species.yr<-in.data %>% group_by(survey_year, CommonName, protocol_id) %>% summarise(count=sum(ObservationCount))
 species.yr<-cast(species.yr, CommonName+protocol_id~survey_year, value="count")
-write.csv(species.yr, "Output/2024/ONOWLS.SpeciesPerYear.csv")
+write.csv(species.yr, "Output/2026/ONOWLS.SpeciesPerYear.csv")
 
 ```
 
@@ -117,7 +121,7 @@ long_route<-in.data %>% filter(RouteIdentifier!="`")
 
 long_route<-long_route %>% group_by(protocol_id, CollectorNumber, Collector, RouteIdentifier) %>% summarise(min_year = min(survey_year), max_year=max(survey_year), n_year=n_distinct(survey_year)) 
 
-write.csv(long_route, "Output/2024/ONOWLS.CountRouteYears_collector.csv")
+write.csv(long_route, "Output/2026/ONOWLS.CountRouteYears_collector.csv")
 ```
 
 Number of years a survey routes was run (excludes Collector)
@@ -127,11 +131,18 @@ long_route2<-in.data %>% filter(RouteIdentifier!="`")
 
 long_route2<-long_route2 %>% group_by(protocol_id, RouteIdentifier) %>% summarise(min_year = min(survey_year), max_year=max(survey_year), n_year=n_distinct(survey_year)) 
 
-write.csv(long_route2, "Output/2024/ONOWLS.CountRouteYears.csv")
+write.csv(long_route2, "Output/2026/ONOWLS.CountRouteYears.csv")
 ```
 
-##Number of years a survey routes was run (don't include Collector + Location Name)
+Number of years a survey routes was run (don't include Collector + Location Name)
 
+```{r route run}
+long_route3<-in.data %>% filter(RouteIdentifier!="`")
+
+long_route3<-long_route3 %>% group_by(protocol_id, RouteIdentifier, Location) %>% summarise(min_year = min(survey_year), max_year=max(survey_year), n_year=n_distinct(survey_year)) 
+
+write.csv(long_route3, "Output/2026/ONOWLS.CountRouteYears_location.csv")
+```
 
 Number of years a volunteer participated. 
 
@@ -140,7 +151,7 @@ vol_year<-in.data %>% filter(RouteIdentifier!="`")
 
 vol_year<-vol_year %>% group_by(CollectorNumber, Collector)%>% summarise(min_year = min(survey_year), max_year=max(survey_year), n_year=n_distinct(survey_year)) 
 
-write.csv(vol_year, "Output/2024/ONOWLS.VolunteerYears.csv")
+write.csv(vol_year, "Output/2026/ONOWLS.VolunteerYears.csv")
 
 ```
 
@@ -148,6 +159,8 @@ write.csv(vol_year, "Output/2024/ONOWLS.VolunteerYears.csv")
 
 ##TO DO
 ##MAPPING IN LEAFLETS FOR INTERACTIVE DISPLAY
+Output to use include so far the CountRouteYear.csv
+
 ##ADD TRENDS TO EACH ROUTE FOR EACH SPECIES
 
 Visualize the routes for each survey year. This is done to ensure that routes are not falling outside Ontario. 
@@ -172,6 +185,43 @@ plot<-ggmap(map) +
   facet_wrap( ~ survey_year, ncol=5)
 
 print(plot)
+
+
+##Annual Map
+
+library(rnaturalearth)
+library(sf)
+library(dplyr)
+library(ggplot2)
+
+
+# Canada provinces
+can_prov <- ne_states(country = "Canada", returnclass = "sf")
+on_sf <- can_prov %>%
+  filter(name_en == "Ontario") %>%
+  st_transform(4326)
+
+pts_2025 <- in.data %>%
+  filter(survey_year == 2025) %>%
+  distinct(RouteIdentifier, SiteCode, latitude, longitude, protocol_id)
+
+pts_2025<-pts_2025 %>% mutate("SurveyArea" = ifelse(protocol_id == 22, "North", ifelse(protocol_id == 36, "Central", "Ontario")))
+
+p<-ggplot() +
+  geom_sf(data = on_sf, fill = "grey95", colour = "grey70", linewidth = 0.3) +
+  geom_point(
+    data = pts_2025,
+    aes(x = longitude, y = latitude, colour = factor(SurveyArea)),
+    size = 2, alpha = 0.8
+  ) +
+  coord_sf() +  # no xlim/ylim: full Ontario polygon
+  scale_color_brewer(palette = "Dark2", name = "Protocol") +
+  labs(x = "Longitude", y = "Latitude", title = "Nocturnal Owl Survey Routes 2025") +
+  theme_classic()
+
+pdf(paste(plot.dir, "Route2025_Owls.pdf", sep=""))
+plot(p)
+while(!is.null(dev.list())) dev.off()  
 
 ```
 

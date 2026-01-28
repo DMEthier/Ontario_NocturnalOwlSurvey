@@ -79,7 +79,7 @@ sp.names<-sp.names %>% select(species_id, english_name, scientific_name)
 
 #create species list for Ontario assessment
 
-sp.list<-c("Barred Owl", "Boreal Owl", "Great Gray Owl", "Great Horned Owl", "Northern Saw-whet Owl")
+sp.list<-c("Barred Owl", "Boreal Owl", "Great Gray Owl", "Great Horned Owl", "Northern Saw-whet Owl", "American Woodcock", "Ruffed Grouse", "Wilson's Snipe")
 
 for(m in 1:length(sp.list)) {
   #m<-1 #for testing each species
@@ -161,6 +161,7 @@ for(m in 1:length(sp.list)) {
   sp.data$kappa_k <- as.integer(factor(sp.data$RouteIdentifier))#index for the random site effect
   sp.data$tau_i <- sp.data$alpha_i <- as.integer(factor(sp.data$cell_id)) #index for each id intercept and slope
   sp.data<-as.data.frame(sp.data)
+  sp.data$prot_year_id <- as.numeric(interaction(sp.data$ellip_e, sp.data$std_yr, drop=TRUE)) #as a protocol sepcific slope so that we can get a trend specificf to each protocol. 
   
   #Specify model with year-id effects so that we can predict the annual index value for each id
   sp.data$gamma_ij <- paste0(sp.data$alpha_i, "-", sp.data$survey_year)
@@ -194,11 +195,14 @@ for(m in 1:length(sp.list)) {
     # random site intercepts
     f(kappa_k, model="iid", constr=TRUE,
       hyper = list(prec = list(prior = "pc.prec", param = c(1, 0.01))))+
-    # random protocol intercepts
-    f(ellip_e, model="iid", constr=TRUE,
-      hyper = list(prec = list(prior = "pc.prec", param = c(1, 0.01))))+
     # id-year effect
     f(gamma_ij, model="iid", constr=TRUE, 
+      hyper = list(prec = list(prior = "pc.prec", param = c(1, 0.01))))+
+    # random protocol intercepts
+    f(ellip_e, model = "iid",
+      hyper = list(prec = list(prior = "pc.prec", param = c(1, 0.01)))) +
+    # random protocol slope
+    f(prot_year_id, std_yr, model = "iid",
       hyper = list(prec = list(prior = "pc.prec", param = c(1, 0.01))))
   
   #---------------------------------------------------------
@@ -400,9 +404,17 @@ for(m in 1:length(sp.list)) {
   post1 <- as.data.frame(sapply(samp1, function(x) x$latent))
   post1$par_names <- par_names
   
-##REGION NORTH AND SOUTH NEEDS ADDED
+
+  #Provincial Tau
+  #tau samples
+  tau_samps1 <- post1[grep("tau_i", post1$par_names), ]
+  row.names(tau_samps1) <- NULL
+  tau_samps1 <- tau_samps1[cells_with_counts, 1:posterior_ss]
+  tau_samps1 <- (exp(tau_samps1) - 1) * 100
+  tau_samps2 <- cbind(grid2, tau_samps1)
+  row.names(tau_samps2) <- NULL
+  val_names <- grep("V", names(tau_samps2))
   
-#National tau
   #tau_national
   tau_nat <- tau_samps2 %>%
     ungroup() %>%  #this seems to be needed before the select function or it won't work
@@ -420,7 +432,7 @@ for(m in 1:length(sp.list)) {
   tau_nat<-tau_nat %>%  mutate(
     results_code="OWLS",
   version="2023",
-  area_code="Canada",
+  area_code="Ontario",
   species_code="",
   species_id=sp.id,
   season="Breeding",
@@ -473,6 +485,81 @@ for(m in 1:length(sp.list)) {
               sep = ",", 
               col.names = FALSE)
   
+  
+  # Extract protocol slope samples (assuming prot_year_id indices match your data)
+  prot_samps <- post1[grep("prot_year_id", post1$par_names), 1:posterior_ss]
+  prot_samps$protocol <- unique(sp.data$ellip_e)[match(1:nrow(prot_samps), sp.data$ellip_e)]  # Map indices to protocols
+  
+  # Reshape and summarize per protocol
+  prot_samps <- prot_samps %>%
+    pivot_longer(cols = starts_with("V"), names_to = "sample", values_to = "slope") %>%
+    group_by(protocol) %>%
+    summarise(
+      med_slope = median(slope),
+      lcl_slope = quantile(slope, 0.025),
+      ucl_slope = quantile(slope, 0.975),
+      iw_slope = ucl_slope - lcl_slope,
+      n = n() / posterior_ss
+    )
+  
+  prot_samps$taxa_code <- sp.list[m]
+  
+  #output for SoBC. This is clunky, but clear. 
+  tau_prot<-prot_samps %>%  mutate(
+    results_code="OWLS",
+    version="2023",
+    area_code="Canada",
+    species_code="",
+    species_id=sp.id,
+    season="Breeding",
+    period="all years",
+    years=paste(min.yr, "-", max.yr, sep=""),
+    year_start=min.yr,
+    year_end=max.yr,
+    trnd=prot_samps$med_tau,
+    index_type="",
+    upper_ci=prot_samps$ucl_tau,
+    lower_ci=prot_samps$lcl_tau,
+    stderr="",
+    model_type="iCAR Slope",
+    model_fit="",
+    percent_change_low="",
+    percent_change_high="",
+    prob_decrease_0="",
+    prob_decrease_25="",
+    prob_decrease_30="",
+    prob_decrease_50="",
+    prob_increase_0="",
+    prob_increase_33="",
+    prob_increase_100="",
+    suitability="",
+    confidence="",
+    precision_num="",
+    precision_cat=ifelse(prot_samps$iw_tau<3.5, "High", ifelse(prot_samps$iw_tau>=3.5 & prot_samps$iw_tau<=6.7, "Medium", "Low")),
+    coverage_num="",
+    coverage_cat="",
+    sample_size=prot_samps$n,
+    sample_size_units="Protcol",
+    prob_LD="",
+    prob_MD="",
+    prob_LC="",
+    prob_MI="",
+    prob_LI="")
+  
+  prot_samps$per=max.yr-min.yr
+  prot_samps$per_trend=prot_samps$med_tau/100
+  prot_samps$percent_change=((1+prot_samps$per_trend)^prot_samps$per-1)*100
+  
+  trend.csv<-prot_samps %>% select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
+  
+  #Write data to table
+  write.table(trend.csv, file = paste(out.dir,
+                                      "NOS_TrendsSlope", ".csv", sep = ""),
+              row.names = FALSE, 
+              append = TRUE, 
+              quote = FALSE, 
+              sep = ",", 
+              col.names = FALSE)
 ##___________________________________________________  
 #Provincial alpha samples
 
