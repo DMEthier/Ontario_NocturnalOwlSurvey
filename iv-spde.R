@@ -125,7 +125,8 @@ for(m in 1:length(sp.list)) {
       scale_color_distiller(palette = "Spectral") +
       theme_bw()  
     
-    pdf(paste(plot.dir, sp.list[m], "_SamplePlot.pdf", sep=""))
+    jpeg(paste0(plot.dir, sp.list[m], "_SamplePlot.jpg"),
+         width = 1200, height = 800, res = 150)  # adjust as needed
     plot(sampleplot)
     while(!is.null(dev.list())) dev.off()
     
@@ -174,7 +175,8 @@ for(m in 1:length(sp.list)) {
               legend.text = element_text(hjust = 0.5))  # Adjust hjust as needed
       
       
-      pdf(paste(plot.dir, sp, "_MeshPlot.pdf", sep=""))
+      jpeg(paste(plot.dir, sp, "_MeshPlot.jpg", sep = ""),
+           width = 1200, height = 800, res = 150)  # adjust as needed
       plot(meshmap2)
       while(!is.null(dev.list())) dev.off()
       
@@ -551,7 +553,8 @@ for(m in 1:length(sp.list)) {
     # plot together
     #multiplot(ps, pa, pt, ps_range95, pa_range95, pt_range95, cols = 2)
     
-    pdf(paste(plot.dir, sp.list[m], "_spdePlot.pdf", sep=""))
+    jpeg(paste(plot.dir, sp.list[m], "_spdePlot.jpg", sep = ""),
+         width = 1200, height = 800, res = 150)  # tweak size/res as needed
     multiplot(pa, pt)
     while(!is.null(dev.list())) dev.off()
     
@@ -649,7 +652,9 @@ for(m in 1:length(sp.list)) {
       scale_label = "posterior\nrange95\ntau"
     )
    
-    pdf(paste(plot.dir, sp.list[m], "_spdeRoutePlot.pdf", sep=""))
+    
+    jpeg(paste(plot.dir, sp.list[m], "_spdeRoutePlot.jpg", sep = ""),
+         width = 1200, height = 800, res = 150)  # tweak size/res as needed
     multiplot(pa2, pt2)
     while(!is.null(dev.list())) dev.off()
     

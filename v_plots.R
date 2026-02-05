@@ -79,7 +79,8 @@ p1 <- ggplot(
 print(p1)
 
 
-pdf(paste(plot.dir, "_TrendPlot_OtherSp.pdf", sep=""))
+jpeg(paste(plot.dir, "_TrendPlot_OtherSp.jpg", sep = ""),
+     width = 1200, height = 800, res = 150)  # adjust size/resolution as needed
 plot(p1)
 while(!is.null(dev.list())) dev.off()  
 
@@ -87,7 +88,7 @@ plot.dat2<-plot.dat %>% filter(english_name %in% c("Barred Owl", "Boreal Owl", "
 
 p2 <- ggplot(
   plot.dat2,
-  aes(x = year, y = index, color = StudyArea, group = StudyArea)
+  aes(x = year, y = index, color = StudyArea,  group = StudyArea)
 ) +
   geom_ribbon(
     aes(ymin = lower_ci, ymax = upper_ci, fill = StudyArea),
@@ -110,6 +111,7 @@ p2 <- ggplot(
 # print or save p
 print(p2)
 
-pdf(paste(plot.dir, "_TrendPlot_Owls.pdf", sep=""))
+jpeg(paste(plot.dir, "_TrendPlot_Owls.jpg", sep = ""),
+     width = 1200, height = 800, res = 150)  # adjust size/resolution as needed
 plot(p2)
 while(!is.null(dev.list())) dev.off()  

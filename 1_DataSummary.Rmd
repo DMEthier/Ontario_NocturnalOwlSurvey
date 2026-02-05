@@ -201,26 +201,42 @@ on_sf <- can_prov %>%
   filter(name_en == "Ontario") %>%
   st_transform(4326)
 
-pts_2025 <- in.data %>%
+# pts_2025 <- in.data %>%
+#   filter(survey_year == 2025) %>%
+#   distinct(RouteIdentifier, SiteCode, latitude, longitude, protocol_id) %>% 
+#   filter(!is.na(protocol_id)) 
+
+pts_2025_maxlat <- in.data %>%
   filter(survey_year == 2025) %>%
-  distinct(RouteIdentifier, SiteCode, latitude, longitude, protocol_id)
+  distinct(RouteIdentifier, SiteCode, latitude, longitude, protocol_id) %>% 
+  filter(!is.na(protocol_id)) %>%
+  group_by(RouteIdentifier) %>%
+  slice_max(latitude, n = 1, with_ties = FALSE) %>%
+  ungroup() %>% 
+  filter(RouteIdentifier == "ON0263")
+
 
 pts_2025<-pts_2025 %>% mutate("SurveyArea" = ifelse(protocol_id == 22, "North", ifelse(protocol_id == 36, "Central", "Ontario")))
 
-p<-ggplot() +
+p <- ggplot() +
   geom_sf(data = on_sf, fill = "grey95", colour = "grey70", linewidth = 0.3) +
   geom_point(
     data = pts_2025,
-    aes(x = longitude, y = latitude, colour = factor(SurveyArea)),
+    aes(x = longitude, y = latitude,
+        colour = SurveyArea,
+        shape  = SurveyArea),
     size = 2, alpha = 0.8
   ) +
-  coord_sf() +  # no xlim/ylim: full Ontario polygon
-  scale_color_brewer(palette = "Dark2", name = "Protocol") +
-  labs(x = "Longitude", y = "Latitude", title = "Nocturnal Owl Survey Routes 2025") +
+  coord_sf() +
+  scale_color_brewer(palette = "Dark2", name = "Survey area") +
+  scale_shape_discrete(name = "Survey area") +
+  labs(x = "Longitude", y = "Latitude",
+       title = "Nocturnal Owl Survey Routes 2025") +
   theme_classic()
 
-pdf(paste(plot.dir, "Route2025_Owls.pdf", sep=""))
-plot(p)
+jpeg(file.path(plot.dir, "Route2025_Owls.jpg"),
+     width = 6, height = 4, units = "in", res = 300)
+print(p)
 while(!is.null(dev.list())) dev.off()  
 
 ```

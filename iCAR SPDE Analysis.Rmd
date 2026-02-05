@@ -87,7 +87,6 @@ source("v_trends.R")
 
 ```{r Plot trends}
 
-##TO DO: Add to the map separate trends for North and South
 source("v_plots.R")
 
 ```
