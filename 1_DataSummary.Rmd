@@ -201,19 +201,19 @@ on_sf <- can_prov %>%
   filter(name_en == "Ontario") %>%
   st_transform(4326)
 
-# pts_2025 <- in.data %>%
+pts_2025 <- in.data %>%
+  filter(survey_year == 2025) %>%
+  distinct(RouteIdentifier, SiteCode, latitude, longitude, protocol_id) %>%
+  filter(!is.na(protocol_id))
+
+# pts_2025_maxlat <- in.data %>%
 #   filter(survey_year == 2025) %>%
 #   distinct(RouteIdentifier, SiteCode, latitude, longitude, protocol_id) %>% 
-#   filter(!is.na(protocol_id)) 
-
-pts_2025_maxlat <- in.data %>%
-  filter(survey_year == 2025) %>%
-  distinct(RouteIdentifier, SiteCode, latitude, longitude, protocol_id) %>% 
-  filter(!is.na(protocol_id)) %>%
-  group_by(RouteIdentifier) %>%
-  slice_max(latitude, n = 1, with_ties = FALSE) %>%
-  ungroup() %>% 
-  filter(RouteIdentifier == "ON0263")
+#   filter(!is.na(protocol_id)) %>%
+#   group_by(RouteIdentifier) %>%
+#   slice_max(latitude, n = 1, with_ties = FALSE) %>%
+#   ungroup() %>% 
+#   filter(RouteIdentifier == "ON0263")
 
 
 pts_2025<-pts_2025 %>% mutate("SurveyArea" = ifelse(protocol_id == 22, "North", ifelse(protocol_id == 36, "Central", "Ontario")))
